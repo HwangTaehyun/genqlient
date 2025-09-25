@@ -7,7 +7,6 @@ package generate
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"go/format"
 	"io"
 	"sort"

@@ -10,7 +10,6 @@ package generate
 // query, and convertArguments, which builds the argument-types.
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 
@@ -437,9 +436,7 @@ func (g *generator) convertDefinition(
 			return nil, err
 		}
 
-		fmt.Printf("DEBUG: Converting input type %s (globalFieldDirectives has %d types)\n", def.Name, len(g.globalFieldDirectives))
 		for i, field := range def.Fields {
-			fmt.Printf("DEBUG: Processing input field %s.%s\n", def.Name, field.Name)
 			_, fieldOptions, err := g.parsePrecedingComment(
 				field, def, field.Position, queryOptions)
 			if err != nil {
@@ -452,18 +449,13 @@ func (g *generator) convertDefinition(
 			if strings.ToLower(def.Name) != def.Name {
 				typesToCheck = append(typesToCheck, strings.ToLower(def.Name))
 			}
-			fmt.Printf("DEBUG: Checking types: %v for field %s\n", typesToCheck, field.Name)
 
 			for _, typeName := range typesToCheck {
-				fmt.Printf("DEBUG: Looking for %s in globalFieldDirectives\n", typeName)
 				if g.globalFieldDirectives[typeName] != nil {
-					fmt.Printf("DEBUG: Found type %s in globalFieldDirectives\n", typeName)
 					if globalFieldDirective := g.globalFieldDirectives[typeName][field.Name]; globalFieldDirective != nil {
-						fmt.Printf("DEBUG: Applying FieldDirective for %s.%s.%s\n", typeName, field.Name, def.Name)
 						// Apply omitempty from global FieldDirective if not already set locally
 						if fieldOptions.Omitempty == nil && globalFieldDirective.Omitempty != nil {
 							fieldOptions.Omitempty = globalFieldDirective.Omitempty
-							fmt.Printf("DEBUG: Applied omitempty=%v to field %s.%s\n", *fieldOptions.Omitempty, typeName, field.Name)
 						}
 						// Apply pointer from global FieldDirective if not already set locally
 						if fieldOptions.Pointer == nil && globalFieldDirective.Pointer != nil {
