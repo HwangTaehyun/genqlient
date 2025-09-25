@@ -438,6 +438,7 @@ func (g *generator) convertDefinition(
 		}
 
 		for i, field := range def.Fields {
+			fmt.Printf("DEBUG: Processing input field %s.%s\n", def.Name, field.Name)
 			_, fieldOptions, err := g.parsePrecedingComment(
 				field, def, field.Position, queryOptions)
 			if err != nil {
@@ -450,6 +451,7 @@ func (g *generator) convertDefinition(
 			if strings.ToLower(def.Name) != def.Name {
 				typesToCheck = append(typesToCheck, strings.ToLower(def.Name))
 			}
+			fmt.Printf("DEBUG: Checking types: %v for field %s\n", typesToCheck, field.Name)
 
 			for _, typeName := range typesToCheck {
 				if g.globalFieldDirectives[typeName] != nil {
