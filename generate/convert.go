@@ -10,6 +10,7 @@ package generate
 // query, and convertArguments, which builds the argument-types.
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
