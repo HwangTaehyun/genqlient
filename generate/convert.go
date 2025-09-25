@@ -444,21 +444,28 @@ func (g *generator) convertDefinition(
 			}
 
 			// Check global FieldDirectives for this input type and field
-			if g.globalFieldDirectives[def.Name] != nil {
-				if globalFieldDirective := g.globalFieldDirectives[def.Name][field.Name]; globalFieldDirective != nil {
-					fmt.Printf("DEBUG: Found global FieldDirective for %s.%s: omitempty=%v\n", def.Name, field.Name, globalFieldDirective.Omitempty)
-					// Apply omitempty from global FieldDirective if not already set locally
-					if fieldOptions.Omitempty == nil && globalFieldDirective.Omitempty != nil {
-						fieldOptions.Omitempty = globalFieldDirective.Omitempty
-						fmt.Printf("DEBUG: Applied omitempty=%v to %s.%s\n", *fieldOptions.Omitempty, def.Name, field.Name)
-					}
-					// Apply pointer from global FieldDirective if not already set locally
-					if fieldOptions.Pointer == nil && globalFieldDirective.Pointer != nil {
-						fieldOptions.Pointer = globalFieldDirective.Pointer
-					}
-					// Apply bind from global FieldDirective if not already set locally
-					if fieldOptions.Bind == "" && globalFieldDirective.Bind != "" {
-						fieldOptions.Bind = globalFieldDirective.Bind
+			// Try both the original name and lowercase version since GraphQL schema uses lowercase
+			typesToCheck := []string{def.Name}
+			if strings.ToLower(def.Name) != def.Name {
+				typesToCheck = append(typesToCheck, strings.ToLower(def.Name))
+			}
+
+			for _, typeName := range typesToCheck {
+				if g.globalFieldDirectives[typeName] != nil {
+					if globalFieldDirective := g.globalFieldDirectives[typeName][field.Name]; globalFieldDirective != nil {
+						// Apply omitempty from global FieldDirective if not already set locally
+						if fieldOptions.Omitempty == nil && globalFieldDirective.Omitempty != nil {
+							fieldOptions.Omitempty = globalFieldDirective.Omitempty
+						}
+						// Apply pointer from global FieldDirective if not already set locally
+						if fieldOptions.Pointer == nil && globalFieldDirective.Pointer != nil {
+							fieldOptions.Pointer = globalFieldDirective.Pointer
+						}
+						// Apply bind from global FieldDirective if not already set locally
+						if fieldOptions.Bind == "" && globalFieldDirective.Bind != "" {
+							fieldOptions.Bind = globalFieldDirective.Bind
+						}
+						break // Found directive, no need to check other type names
 					}
 				}
 			}

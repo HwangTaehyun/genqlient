@@ -266,21 +266,22 @@ func (g *generator) addOperation(op *ast.OperationDefinition) error {
 	f := formatter.NewFormatter(&builder)
 	f.FormatQueryDocument(queryDoc)
 
-	fmt.Printf("DEBUG: Processing operation: %s\n", op.Name)
 	commentLines, directive, err := g.parsePrecedingComment(op, nil, op.Position, nil)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("DEBUG: Operation %s has %d FieldDirective types\n", op.Name, len(directive.FieldDirectives))
 	// Collect FieldDirectives from this operation for global access during input type processing
+	if len(directive.FieldDirectives) > 0 {
+		fmt.Printf("DEBUG: Operation %s has FieldDirectives: %v\n", op.Name, directive.FieldDirectives)
+	}
 	for typeName, fieldMap := range directive.FieldDirectives {
-		fmt.Printf("DEBUG: Collecting FieldDirectives for type: %s\n", typeName)
+		fmt.Printf("DEBUG: Processing FieldDirectives for type: %s\n", typeName)
 		if g.globalFieldDirectives[typeName] == nil {
 			g.globalFieldDirectives[typeName] = make(map[string]*genqlientDirective)
 		}
 		for fieldName, fieldDirective := range fieldMap {
-			fmt.Printf("DEBUG: Adding FieldDirective %s.%s: omitempty=%v\n", typeName, fieldName, fieldDirective.Omitempty)
+			fmt.Printf("DEBUG: Adding %s.%s: omitempty=%v\n", typeName, fieldName, fieldDirective.Omitempty)
 			g.globalFieldDirectives[typeName][fieldName] = fieldDirective
 		}
 	}
