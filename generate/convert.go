@@ -454,7 +454,9 @@ func (g *generator) convertDefinition(
 			fmt.Printf("DEBUG: Checking types: %v for field %s\n", typesToCheck, field.Name)
 
 			for _, typeName := range typesToCheck {
+				fmt.Printf("DEBUG: Looking for %s in globalFieldDirectives\n", typeName)
 				if g.globalFieldDirectives[typeName] != nil {
+					fmt.Printf("DEBUG: Found type %s in globalFieldDirectives\n", typeName)
 					if globalFieldDirective := g.globalFieldDirectives[typeName][field.Name]; globalFieldDirective != nil {
 						fmt.Printf("DEBUG: Applying FieldDirective for %s.%s.%s\n", typeName, field.Name, def.Name)
 						// Apply omitempty from global FieldDirective if not already set locally
