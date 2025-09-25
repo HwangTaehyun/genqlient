@@ -12,6 +12,7 @@ package generate
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/vektah/gqlparser/v2/ast"
 )
