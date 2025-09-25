@@ -260,8 +260,16 @@ func (dir *genqlientDirective) validate(node interface{}, schema *ast.Schema) er
 			return errorf(dir.pos, "flatten is only applicable to fields, not variable-definitions")
 		}
 
+		// Smart validation: allow FieldDirectives only if they target input types
 		if len(dir.FieldDirectives) > 0 {
-			return errorf(dir.pos, "for is only applicable to operations and arguments")
+			// Check if this variable is an input type
+			if !isInputType(node.Type, schema) {
+				return errorf(dir.pos, "for directive on non-input-type variables is not supported")
+			}
+			// Additional validation: ensure all FieldDirectives target valid input type fields
+			if err := validateFieldDirectivesForInputType(dir.FieldDirectives, node.Type, schema, dir.pos); err != nil {
+				return err
+			}
 		}
 
 		if dir.TypeName != "" && dir.Bind != "" && dir.Bind != "-" {
@@ -287,8 +295,9 @@ func (dir *genqlientDirective) validate(node interface{}, schema *ast.Schema) er
 			}
 		}
 
+		// Smart validation: FieldDirectives not applicable to query/mutation fields
 		if len(dir.FieldDirectives) > 0 {
-			return errorf(dir.pos, "for is only applicable to operations and arguments")
+			return errorf(dir.pos, "for directive cannot be applied to query/mutation fields directly")
 		}
 
 		if dir.TypeName != "" && dir.Bind != "" && dir.Bind != "-" {
@@ -405,6 +414,58 @@ func fillDefaultString(target *string, defaults ...string) {
 			return
 		}
 	}
+}
+
+// isInputType checks if the given GraphQL type is an input type
+func isInputType(typ *ast.Type, schema *ast.Schema) bool {
+	// Unwrap array and non-null wrappers to get the base type
+	baseTypeName := typ.Name()
+	if baseTypeName == "" {
+		return false
+	}
+
+	schemaType, exists := schema.Types[baseTypeName]
+	if !exists {
+		return false
+	}
+
+	return schemaType.Kind == ast.InputObject
+}
+
+// validateFieldDirectivesForInputType validates that FieldDirectives target valid input type fields
+func validateFieldDirectivesForInputType(fieldDirectives map[string]map[string]*genqlientDirective, varType *ast.Type, schema *ast.Schema, pos *ast.Position) error {
+	baseTypeName := varType.Name()
+	if baseTypeName == "" {
+		return errorf(pos, "cannot determine base type for FieldDirectives validation")
+	}
+
+	// Check if any FieldDirective targets the variable's type
+	if fieldDirs, exists := fieldDirectives[baseTypeName]; exists {
+		schemaType, typeExists := schema.Types[baseTypeName]
+		if !typeExists {
+			return errorf(pos, `for directive targets unknown type "%s"`, baseTypeName)
+		}
+
+		// Validate that all targeted fields exist in the input type
+		for fieldName, fieldDir := range fieldDirs {
+			var fieldFound bool
+			for _, field := range schemaType.Fields {
+				if field.Name == fieldName {
+					fieldFound = true
+					// Additional validation: check if the directive makes sense for this field
+					if fieldDir.Omitempty != nil && field.Type.NonNull {
+						return errorf(fieldDir.pos, `omitempty cannot be applied to non-null field "%s.%s"`, baseTypeName, fieldName)
+					}
+					break
+				}
+			}
+			if !fieldFound {
+				return errorf(fieldDir.pos, `for directive targets non-existent field "%s.%s"`, baseTypeName, fieldName)
+			}
+		}
+	}
+
+	return nil
 }
 
 // merge updates the receiver, which is a directive applied to some node, with
