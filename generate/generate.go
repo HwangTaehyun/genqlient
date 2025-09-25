@@ -7,6 +7,7 @@ package generate
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"go/format"
 	"io"
 	"sort"
@@ -43,6 +44,8 @@ type generator struct {
 	// ast.FragmentSpread.Definition, but for some reason it doesn't seem to be
 	// set consistently, even post-validation.
 	fragments map[string]*ast.FragmentDefinition
+	// Global FieldDirectives collected from all operations, available during input type processing
+	globalFieldDirectives map[string]map[string]*genqlientDirective
 }
 
 // JSON tags in operation are for ExportOperations (see Config for details).
@@ -78,13 +81,14 @@ func newGenerator(
 	fragments ast.FragmentDefinitionList,
 ) *generator {
 	g := generator{
-		Config:        config,
-		typeMap:       map[string]goType{},
-		imports:       map[string]string{},
-		usedAliases:   map[string]bool{},
-		templateCache: map[string]*template.Template{},
-		schema:        schema,
-		fragments:     make(map[string]*ast.FragmentDefinition, len(fragments)),
+		Config:                config,
+		typeMap:               map[string]goType{},
+		imports:               map[string]string{},
+		usedAliases:           map[string]bool{},
+		templateCache:         map[string]*template.Template{},
+		schema:                schema,
+		fragments:             make(map[string]*ast.FragmentDefinition, len(fragments)),
+		globalFieldDirectives: make(map[string]map[string]*genqlientDirective),
 	}
 
 	for _, fragment := range fragments {
@@ -262,9 +266,23 @@ func (g *generator) addOperation(op *ast.OperationDefinition) error {
 	f := formatter.NewFormatter(&builder)
 	f.FormatQueryDocument(queryDoc)
 
+	fmt.Printf("DEBUG: Processing operation: %s\n", op.Name)
 	commentLines, directive, err := g.parsePrecedingComment(op, nil, op.Position, nil)
 	if err != nil {
 		return err
+	}
+
+	fmt.Printf("DEBUG: Operation %s has %d FieldDirective types\n", op.Name, len(directive.FieldDirectives))
+	// Collect FieldDirectives from this operation for global access during input type processing
+	for typeName, fieldMap := range directive.FieldDirectives {
+		fmt.Printf("DEBUG: Collecting FieldDirectives for type: %s\n", typeName)
+		if g.globalFieldDirectives[typeName] == nil {
+			g.globalFieldDirectives[typeName] = make(map[string]*genqlientDirective)
+		}
+		for fieldName, fieldDirective := range fieldMap {
+			fmt.Printf("DEBUG: Adding FieldDirective %s.%s: omitempty=%v\n", typeName, fieldName, fieldDirective.Omitempty)
+			g.globalFieldDirectives[typeName][fieldName] = fieldDirective
+		}
 	}
 
 	inputType, err := g.convertArguments(op, directive)

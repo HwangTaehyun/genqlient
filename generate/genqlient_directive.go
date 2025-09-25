@@ -490,7 +490,14 @@ func (dir *genqlientDirective) mergeOperationDirective(
 		typeName := field.ObjectDefinition.Name
 		forField = operationDirective.FieldDirectives[typeName][field.Name]
 	case *ast.FieldDefinition: // input-type field
-		forField = operationDirective.FieldDirectives[parentIfInputField.Name][field.Name]
+		if parentIfInputField != nil {
+			forField = operationDirective.FieldDirectives[parentIfInputField.Name][field.Name]
+		}
+	case *ast.VariableDefinition: // operation variable
+		// For variables with input types, check if there are any FieldDirectives
+		// that should be applied to the input type fields
+		// Note: This case handles when FieldDirectives are parsed at the operation level
+		// but need to be available when processing input type fields later
 	}
 	// Just to simplify nil-checking in the code below:
 	if forField == nil {
