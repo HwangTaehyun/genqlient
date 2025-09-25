@@ -271,20 +271,7 @@ func (g *generator) addOperation(op *ast.OperationDefinition) error {
 		return err
 	}
 
-	// Collect FieldDirectives from this operation for global access during input type processing
-	if len(directive.FieldDirectives) > 0 {
-		fmt.Printf("DEBUG: Operation %s has FieldDirectives: %v\n", op.Name, directive.FieldDirectives)
-	}
-	for typeName, fieldMap := range directive.FieldDirectives {
-		fmt.Printf("DEBUG: Processing FieldDirectives for type: %s\n", typeName)
-		if g.globalFieldDirectives[typeName] == nil {
-			g.globalFieldDirectives[typeName] = make(map[string]*genqlientDirective)
-		}
-		for fieldName, fieldDirective := range fieldMap {
-			fmt.Printf("DEBUG: Adding %s.%s: omitempty=%v\n", typeName, fieldName, fieldDirective.Omitempty)
-			g.globalFieldDirectives[typeName][fieldName] = fieldDirective
-		}
-	}
+	// FieldDirectives are now collected in the pre-step above
 
 	inputType, err := g.convertArguments(op, directive)
 	if err != nil {
@@ -366,6 +353,24 @@ func Generate(config *Config) (map[string][]byte, error) {
 	// in convert.go, and it additionally updates g.typeMap to include all the
 	// types it needs.
 	g := newGenerator(config, schema, document.Fragments)
+
+	// Pre-step: Collect all FieldDirectives from operations before processing types
+	for _, op := range document.Operations {
+		_, directive, err := g.parsePrecedingComment(op, nil, op.Position, nil)
+		if err != nil {
+			return nil, err
+		}
+		// Collect FieldDirectives from this operation for global access during input type processing
+		for typeName, fieldMap := range directive.FieldDirectives {
+			if g.globalFieldDirectives[typeName] == nil {
+				g.globalFieldDirectives[typeName] = make(map[string]*genqlientDirective)
+			}
+			for fieldName, fieldDirective := range fieldMap {
+				g.globalFieldDirectives[typeName][fieldName] = fieldDirective
+			}
+		}
+	}
+
 	for _, op := range document.Operations {
 		if err = g.addOperation(op); err != nil {
 			return nil, err
