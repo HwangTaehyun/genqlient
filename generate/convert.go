@@ -437,6 +437,7 @@ func (g *generator) convertDefinition(
 			return nil, err
 		}
 
+		fmt.Printf("DEBUG: Converting input type %s (globalFieldDirectives has %d types)\n", def.Name, len(g.globalFieldDirectives))
 		for i, field := range def.Fields {
 			fmt.Printf("DEBUG: Processing input field %s.%s\n", def.Name, field.Name)
 			_, fieldOptions, err := g.parsePrecedingComment(
