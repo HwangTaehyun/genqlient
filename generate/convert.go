@@ -454,9 +454,11 @@ func (g *generator) convertDefinition(
 			for _, typeName := range typesToCheck {
 				if g.globalFieldDirectives[typeName] != nil {
 					if globalFieldDirective := g.globalFieldDirectives[typeName][field.Name]; globalFieldDirective != nil {
+						fmt.Printf("DEBUG: Applying FieldDirective for %s.%s.%s\n", typeName, field.Name, def.Name)
 						// Apply omitempty from global FieldDirective if not already set locally
 						if fieldOptions.Omitempty == nil && globalFieldDirective.Omitempty != nil {
 							fieldOptions.Omitempty = globalFieldDirective.Omitempty
+							fmt.Printf("DEBUG: Applied omitempty=%v to field %s.%s\n", *fieldOptions.Omitempty, typeName, field.Name)
 						}
 						// Apply pointer from global FieldDirective if not already set locally
 						if fieldOptions.Pointer == nil && globalFieldDirective.Pointer != nil {
